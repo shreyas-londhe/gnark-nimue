@@ -1,4 +1,4 @@
-package gnark_nimue
+package main
 
 import (
 	"fmt"
@@ -7,19 +7,8 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
 	"github.com/consensys/gnark/std/math/uints"
-	"github.com/stretchr/testify/assert"
-	"testing"
+	gnark_nimue "gnark-nimue"
 )
-
-func TestParser(t *testing.T) {
-	pat := "👩‍💻🥷🏻👨‍💻 building 🔐🔒🗝️\u0000A10first\u0000S10second"
-	patBytes := []byte(pat)
-	fmt.Printf("patBytes: %s\n", patBytes)
-	iopat := IOPattern{}
-	err := iopat.Parse(patBytes)
-	assert.Nil(t, err)
-	fmt.Printf("iopat: %s\n", iopat.PPrint())
-}
 
 type TestCircuit struct {
 	IO         []byte
@@ -27,7 +16,8 @@ type TestCircuit struct {
 }
 
 func (circuit *TestCircuit) Define(api frontend.API) error {
-	arthur := NewArthur(api, circuit.IO, circuit.Transcript[:])
+	arthur := gnark_nimue.NewArthur(api, circuit.IO, circuit.Transcript[:])
+
 	firstChallenge := make([]uints.U8, 8)
 	arthur.FillChallengeUnits(firstChallenge)
 	firstReply := make([]uints.U8, 8)
@@ -35,15 +25,23 @@ func (circuit *TestCircuit) Define(api frontend.API) error {
 	for i := range firstChallenge {
 		api.AssertIsEqual(firstChallenge[i].Val, firstReply[i].Val)
 	}
+
+	secondChallenge := make([]uints.U8, 16)
+	arthur.FillChallengeUnits(secondChallenge)
+	secondReply := make([]uints.U8, 16)
+	arthur.FillNextUnits(secondReply)
+	for i := range secondChallenge {
+		api.AssertIsEqual(secondChallenge[i].Val, secondReply[i].Val)
+	}
+	
 	return nil
 }
 
-func TestEndToEnd(t *testing.T) {
+func main() {
 	// the protocol has two rounds in which the verifier sends 8/16 bytes of randomness and the prover must send it back
 	badIOPat := "bad-protocol\u0000S8first challenge\u0000A8first reply\u0000S16second challenge\u0000A16second reply"
-	io := IOPattern{}
-	err := io.Parse([]byte(badIOPat))
-	assert.Nil(t, err)
+	io := gnark_nimue.IOPattern{}
+	_ = io.Parse([]byte(badIOPat))
 	fmt.Printf("io: %s\n", io.PPrint())
 
 	circ := TestCircuit{
@@ -69,6 +67,5 @@ func TestEndToEnd(t *testing.T) {
 
 	proof, _ := groth16.Prove(ccs, pk, witness)
 	vErr := groth16.Verify(proof, vk, publicWitness)
-	assert.Nil(t, vErr)
-
+	fmt.Printf("%v\n", vErr)
 }
