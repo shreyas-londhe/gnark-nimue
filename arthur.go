@@ -19,12 +19,12 @@ func NewArthur(api frontend.API, io []byte, transcript []uints.U8) *Arthur {
 	}
 }
 
-func (arthur *Arthur) FillNextUnits(units []uints.U8) {
-	copy(units, arthur.transcript)
-	arthur.transcript = arthur.transcript[len(units):]
-	arthur.safe.sponge.Absorb(units)
+func (arthur *Arthur) FillNextUnits(uints []uints.U8) {
+	copy(uints, arthur.transcript)
+	arthur.transcript = arthur.transcript[len(uints):]
+	arthur.safe.sponge.Absorb(uints)
 }
 
-func (arthur *Arthur) FillChallengeUnits(units []uints.U8) {
-	arthur.safe.sponge.Squeeze(units)
+func (arthur *Arthur) FillChallengeUnits(uints []uints.U8) {
+	arthur.safe.sponge.Squeeze(uints)
 }

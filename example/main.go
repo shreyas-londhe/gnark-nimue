@@ -53,10 +53,8 @@ func main() {
 	pk, vk, _ := groth16.Setup(ccs)
 
 	transcriptBytes := []byte{9, 2, 243, 247, 30, 73, 172, 83, 203, 176, 231, 217, 99, 6, 2, 176, 93, 1, 93, 32, 162, 116, 211, 219}
-	transcript := [24]uints.U8{}
-	for i := range transcriptBytes {
-		transcript[i] = uints.NewU8(transcriptBytes[i])
-	}
+
+	transcript := [24]uints.U8(uints.NewU8Array(transcriptBytes[:]))
 
 	assignment := TestCircuit{
 		IO:         []byte(badIOPat),
