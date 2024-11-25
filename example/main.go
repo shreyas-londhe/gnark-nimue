@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
 	"github.com/consensys/gnark/std/math/uints"
-	gnark_nimue "gnark-nimue"
+	gnark_nimue "github.com/reilabs/gnark-nimue"
 )
 
 type TestCircuit struct {
@@ -33,7 +34,7 @@ func (circuit *TestCircuit) Define(api frontend.API) error {
 	for i := range secondChallenge {
 		api.AssertIsEqual(secondChallenge[i].Val, secondReply[i].Val)
 	}
-	
+
 	return nil
 }
 

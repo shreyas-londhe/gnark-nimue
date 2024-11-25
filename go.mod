@@ -1,4 +1,4 @@
-module gnark-nimue
+module github.com/reilabs/gnark-nimue
 
 go 1.23.3
 

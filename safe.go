@@ -3,7 +3,7 @@ package gnark_nimue
 import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/uints"
-	"gnark-nimue/hash"
+	"github.com/reilabs/gnark-nimue/hash"
 )
 
 type Safe[U any, H hash.DuplexHash[U]] struct {
