@@ -11,20 +11,24 @@ type Arthur struct {
 	safe       *Safe[uints.U8, hash.Keccak]
 }
 
-func NewArthur(api frontend.API, io []byte, transcript []uints.U8) *Arthur {
+func NewArthur(api frontend.API, io []byte, transcript []uints.U8) (*Arthur, error) {
 	sponge, _ := hash.NewKeccak(api)
-	return &Arthur{
-		transcript: transcript,
-		safe:       NewSafe[uints.U8, hash.Keccak](api, sponge, io),
+	safe, err := NewSafe[uints.U8, hash.Keccak](api, sponge, io)
+	if err != nil {
+		return nil, err
 	}
+	return &Arthur{
+		transcript,
+		safe,
+	}, nil
 }
 
-func (arthur *Arthur) FillNextUnits(uints []uints.U8) {
+func (arthur *Arthur) FillNextUnits(uints []uints.U8) error {
 	copy(uints, arthur.transcript)
 	arthur.transcript = arthur.transcript[len(uints):]
-	arthur.safe.sponge.Absorb(uints)
+	return arthur.safe.Absorb(uints)
 }
 
-func (arthur *Arthur) FillChallengeUnits(uints []uints.U8) {
-	arthur.safe.sponge.Squeeze(uints)
+func (arthur *Arthur) FillChallengeUnits(uints []uints.U8) error {
+	return arthur.safe.Squeeze(uints)
 }
