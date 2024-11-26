@@ -1,9 +1,9 @@
 package gnark_nimue
 
 import (
-	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/uints"
 	"github.com/reilabs/gnark-nimue/hash"
+	_ "unsafe"
 )
 
 type Safe[U any, H hash.DuplexHash[U]] struct {
@@ -11,21 +11,52 @@ type Safe[U any, H hash.DuplexHash[U]] struct {
 	ops    OpQueue
 }
 
-func generateTag(api frontend.API, io []byte) [32]uints.U8 {
-	k, _ := hash.NewKeccak(api)
-	data := make([]uints.U8, len(io))
-	for i := range io {
-		data[i] = uints.NewU8(io[i])
+//go:linkname keccakF1600 golang.org/x/crypto/sha3.keccakF1600
+func keccakF1600(a *[25]uint64)
+
+func keccakF(a *[200]byte) {
+	b := [25]uint64{}
+	for i := 0; i < 25; i++ {
+		for j := 0; j < 8; j++ {
+			b[i] |= uint64(a[i*8+j]) << uint(j*8)
+		}
 	}
-	k.Absorb(data)
+	keccakF1600(&b)
+	for i := 0; i < 25; i++ {
+		for j := 0; j < 8; j++ {
+			a[i*8+j] = byte(b[i] >> uint(j*8))
+		}
+	}
+}
+
+func generateTag(io []byte) [32]uints.U8 {
+	state := [200]byte{}
+	absorbPos := 0
+	R := 136
+	for len(io) > 0 {
+		if absorbPos == R {
+			keccakF(&state)
+			absorbPos = 0
+		} else {
+			chunkLen := min(len(io), R-absorbPos)
+			chunk, rest := io[:chunkLen], io[chunkLen:]
+			copy(state[absorbPos:], chunk)
+			absorbPos += chunkLen
+			io = rest
+		}
+	}
+	keccakF(&state)
 	tag := [32]uints.U8{}
-	k.Squeeze(tag[:])
+	for i := 0; i < 32; i++ {
+		tag[i] = uints.NewU8(state[i])
+	}
 	return tag
 }
 
-func NewSafe[U any, H hash.DuplexHash[U]](api frontend.API, sponge H, ioStr []byte) (*Safe[U, H], error) {
-	tag := generateTag(api, ioStr)
+func NewSafe[U any, H hash.DuplexHash[U]](sponge H, ioStr []byte) (*Safe[U, H], error) {
+	tag := generateTag(ioStr)
 	sponge.Initialize(tag)
+
 	io := IOPattern{}
 	err := io.Parse(ioStr)
 	if err != nil {

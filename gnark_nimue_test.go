@@ -27,11 +27,20 @@ type TestCircuit struct {
 }
 
 func (circuit *TestCircuit) Define(api frontend.API) error {
-	arthur := NewArthur(api, circuit.IO, circuit.Transcript[:])
+	arthur, err := NewKeccakArthur(api, circuit.IO, circuit.Transcript[:])
+	if err != nil {
+		return err
+	}
 	firstChallenge := make([]uints.U8, 8)
-	arthur.FillChallengeUnits(firstChallenge)
+	err = arthur.FillChallengeBytes(firstChallenge)
+	if err != nil {
+		return err
+	}
 	firstReply := make([]uints.U8, 8)
-	arthur.FillNextUnits(firstReply)
+	err = arthur.FillNextBytes(firstReply)
+	if err != nil {
+		return err
+	}
 	for i := range firstChallenge {
 		api.AssertIsEqual(firstChallenge[i].Val, firstReply[i].Val)
 	}

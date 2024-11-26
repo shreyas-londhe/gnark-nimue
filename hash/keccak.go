@@ -42,6 +42,14 @@ func (k *KeccakState) Zeroize(index int) {
 	k.state[index] = uints.NewU8(0)
 }
 
+func (k *KeccakState) PrintState(api frontend.API) {
+	vars := make([]frontend.Variable, len(k.state))
+	for i, s := range k.state {
+		vars[i] = s.Val
+	}
+	api.Println(vars...)
+}
+
 type Keccak DuplexHash[uints.U8]
 
 func NewKeccak(api frontend.API) (Keccak, error) {

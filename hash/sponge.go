@@ -1,6 +1,9 @@
 package hash
 
-import "github.com/consensys/gnark/std/math/uints"
+import (
+	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/gnark/std/math/uints"
+)
 
 type Sponge[U any] interface {
 	N() int
@@ -9,6 +12,7 @@ type Sponge[U any] interface {
 	Permute()
 	State() []U
 	Zeroize(index int)
+	PrintState(api frontend.API)
 }
 
 type DuplexHash[U any] interface {
@@ -16,6 +20,7 @@ type DuplexHash[U any] interface {
 	Absorb(data []U)
 	Squeeze(out []U)
 	Ratchet()
+	PrintState(api frontend.API)
 }
 
 type DuplexSponge[U any, S Sponge[U]] struct {
@@ -70,4 +75,8 @@ func (s *DuplexSponge[U, S]) Ratchet() {
 		s.sponge.Zeroize(i)
 	}
 	s.squeezePos = s.sponge.R()
+}
+
+func (s *DuplexSponge[U, S]) PrintState(api frontend.API) {
+	s.sponge.PrintState(api)
 }
