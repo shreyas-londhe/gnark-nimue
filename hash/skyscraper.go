@@ -62,7 +62,6 @@ func initSbox(api frontend.API) *logderivlookup.Table {
 	t := logderivlookup.New(api)
 	for i := range 256 {
 		b := uint8(i)
-		//(v ^ ((!v).rotate_left(1) & v.rotate_left(2) & v.rotate_left(3))).rotate_left(1)
 		x := bits.RotateLeft8(^b, 1)
 		y := bits.RotateLeft8(b, 2)
 		z := bits.RotateLeft8(b, 3)
@@ -124,7 +123,6 @@ func (s *Skyscraper) assertLessThanModulus(hi, lo frontend.Variable) {
 	s.api.AssertIsBoolean(borrow)
 	resultLo := s.api.Add(s.api.Sub(modulusLoMinusOne, lo), s.api.Mul(borrow, pow128))
 	resultHi := s.api.Sub(s.api.Sub(modulusHi, hi), borrow)
-	s.api.ToBinary(resultLo, 128)
 	s.rchk.Check(resultHi, 128)
 	s.rchk.Check(resultLo, 128)
 }
@@ -134,6 +132,7 @@ func (s *Skyscraper) canonicalDecompose(v frontend.Variable) [32]frontend.Variab
 	o, _ := s.api.Compiler().NewHint(bytesBeHint, 32, v)
 	result := [32]frontend.Variable{}
 	copy(result[:], o)
+	s.api.AssertIsEqual(s.varFromBytesBe(result[:]), v)
 	s.assertLessThanModulus(s.varFromBytesBe(result[:16]), s.varFromBytesBe(result[16:]))
 	return result
 }
