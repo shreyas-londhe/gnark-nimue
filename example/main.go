@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/reilabs/gnark-nimue/hash"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/groth16"
@@ -185,7 +186,42 @@ func ExampleWhir() {
 	fmt.Printf("%v\n", vErr)
 }
 
+type Manhattan struct {
+	I, O frontend.Variable
+}
+
+func (c *Manhattan) Define(api frontend.API) error {
+	s := hash.NewSkyscraper(api)
+	a := c.I
+	for range 2000 {
+		a = s.Compress(a, a)
+	}
+	api.AssertIsEqual(c.O, a)
+	return nil
+}
+
+func ExampleManhattan() {
+
+	ccs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, &Manhattan{})
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	pk, vk, _ := groth16.Setup(ccs)
+	assignment := Manhattan{
+		I: 1,
+		O: 1000,
+	}
+	witness, _ := frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
+	publicWitness, _ := witness.Public()
+
+	proof, _ := groth16.Prove(ccs, pk, witness)
+	vErr := groth16.Verify(proof, vk, publicWitness)
+	fmt.Printf("%v\n", vErr)
+}
+
 func main() {
 	//Example1()
-	ExampleWhir()
+	//ExampleWhir()
+	ExampleManhattan()
 }
