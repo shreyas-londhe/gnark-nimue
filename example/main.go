@@ -128,6 +128,22 @@ func (circuit *WhirCircuit) Define(api frontend.API) error {
 	}
 	api.Println(initialCombinationRandomness[0])
 
+	for range 4 {
+		sumcheckPolyEvals := [3]frontend.Variable{}
+		err = arthur.FillNextScalars(sumcheckPolyEvals[:])
+		if err != nil {
+			return err
+		}
+		api.Println(sumcheckPolyEvals[:]...)
+
+		foldingRandomnessSingle := [1]frontend.Variable{}
+		err = arthur.FillChallengeScalars(foldingRandomnessSingle[:])
+		if err != nil {
+			return err
+		}
+		api.Println(foldingRandomnessSingle[0])
+	}
+
 	return nil
 }
 

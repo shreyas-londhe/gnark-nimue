@@ -1,6 +1,7 @@
 package hash
 
 import (
+	"fmt"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/uints"
 )
@@ -43,7 +44,7 @@ func (s *DuplexSponge[U, S]) Absorb(input []U) {
 		} else {
 			chunkLen := min(len(input), s.sponge.R()-s.absorbPos)
 			chunk, rest := input[:chunkLen], input[chunkLen:]
-			copy(s.sponge.State(), chunk)
+			copy(s.sponge.State()[s.absorbPos:], chunk)
 			s.absorbPos += chunkLen
 			input = rest
 		}
@@ -78,5 +79,7 @@ func (s *DuplexSponge[U, S]) Ratchet() {
 }
 
 func (s *DuplexSponge[U, S]) PrintState(api frontend.API) {
+	msg := fmt.Sprintf("absorbPos %d squeezePos %d", s.absorbPos, s.squeezePos)
+	api.Println(msg)
 	s.sponge.PrintState(api)
 }

@@ -1,6 +1,7 @@
 package gnark_nimue
 
 import (
+	"fmt"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/uints"
 	"github.com/reilabs/gnark-nimue/hash"
@@ -12,6 +13,7 @@ type Arthur interface {
 	FillChallengeBytes(uints []uints.U8) error
 	FillNextScalars(scalars []frontend.Variable) error
 	FillChallengeScalars(scalars []frontend.Variable) error
+	PrintState(api frontend.API)
 }
 
 type byteArthur[H hash.DuplexHash[uints.U8]] struct {
@@ -86,4 +88,10 @@ func (arthur *byteArthur[H]) FillChallengeScalars(scalars []frontend.Variable) e
 		}
 	}
 	return nil
+}
+
+func (arthur *byteArthur[H]) PrintState(api frontend.API) {
+	msg := fmt.Sprintf("remaining transcript bytes: %d", len(arthur.transcript))
+	api.Println(msg)
+	arthur.safe.sponge.PrintState(api)
 }

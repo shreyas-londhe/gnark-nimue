@@ -1,6 +1,7 @@
 package gnark_nimue
 
 import (
+	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/uints"
 	"github.com/reilabs/gnark-nimue/hash"
 	_ "unsafe"
@@ -84,4 +85,8 @@ func (safe *Safe[U, H]) Absorb(in []U) (err error) {
 	}
 	safe.sponge.Absorb(in)
 	return
+}
+
+func (safe *Safe[U, H]) PrintState(api frontend.API) {
+	safe.sponge.PrintState(api)
 }
