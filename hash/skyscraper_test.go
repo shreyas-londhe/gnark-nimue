@@ -1,6 +1,7 @@
 package hash
 
 import (
+	"fmt"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend"
 	"github.com/consensys/gnark/frontend"
@@ -16,23 +17,27 @@ func bigIntFromString(s string) frontend.Variable {
 }
 
 type TestSboxC struct {
-	In, Out frontend.Variable
+	WordSize int
+	In, Out  frontend.Variable
 }
 
 func (c *TestSboxC) Define(api frontend.API) error {
-	s := NewSkyscraper(api)
+	s := NewSkyscraper(api, c.WordSize)
 	api.AssertIsEqual(s.sbox(c.In), c.Out)
 	return nil
 }
 
 func TestSbox(t *testing.T) {
 	assert := test.NewAssert(t)
-	assert.CheckCircuit(&TestSboxC{}, test.WithCurves(ecc.BN254), test.WithBackends(backend.GROTH16),
-		test.WithValidAssignment(&TestSboxC{0xcd, 0xd3}),
-		test.WithValidAssignment(&TestSboxC{0x17, 0x0e}),
-		test.WithInvalidAssignment(&TestSboxC{0x17, 0x0f}),
-		test.WithInvalidAssignment(&TestSboxC{0x1234, 0x0f}))
-
+	for wordSize := 1; wordSize <= 2; wordSize++ {
+		assert.CheckCircuit(&TestSboxC{WordSize: wordSize}, test.WithCurves(ecc.BN254), test.WithBackends(backend.GROTH16),
+			test.WithValidAssignment(&TestSboxC{wordSize, 0xcd, 0xd3}),
+			test.WithValidAssignment(&TestSboxC{wordSize, 0x17, 0x0e}),
+			test.WithInvalidAssignment(&TestSboxC{wordSize, 0x17, 0x0f}),
+			test.WithInvalidAssignment(&TestSboxC{wordSize, 0x1234, 0x0f}))
+	}
+	assert.CheckCircuit(&TestSboxC{WordSize: 2}, test.WithCurves(ecc.BN254), test.WithBackends(backend.GROTH16),
+		test.WithValidAssignment(&TestSboxC{2, 0xcd17, 0xd30e}))
 }
 
 type TestSquareC struct {
@@ -40,7 +45,7 @@ type TestSquareC struct {
 }
 
 func (c *TestSquareC) Define(api frontend.API) error {
-	s := NewSkyscraper(api)
+	s := NewSkyscraper(api, 1)
 	s.sbox(123) // needed to silence an error about unused lookup tables
 	api.AssertIsEqual(s.square(c.In), c.Out)
 	return nil
@@ -57,40 +62,48 @@ func TestSquare(t *testing.T) {
 }
 
 type TestBarC struct {
-	In, Out frontend.Variable
+	WordSize int
+	In, Out  frontend.Variable
 }
 
 func (c *TestBarC) Define(api frontend.API) error {
-	s := NewSkyscraper(api)
+	s := NewSkyscraper(api, c.WordSize)
 	api.AssertIsEqual(s.bar(c.In), c.Out)
 	return nil
 }
 
 func TestBar(t *testing.T) {
 	assert := test.NewAssert(t)
-	assert.CheckCircuit(&TestBarC{}, test.WithCurves(ecc.BN254), test.WithBackends(backend.GROTH16),
-		test.WithValidAssignment(&TestBarC{0, 0}),
-		test.WithValidAssignment(&TestBarC{1, bigIntFromString("680564733841876926926749214863536422912")}),
-		test.WithValidAssignment(&TestBarC{2, bigIntFromString("1361129467683753853853498429727072845824")}),
-		test.WithValidAssignment(&TestBarC{bigIntFromString("4111585712030104139416666328230194227848755236259444667527487224433891325648"), bigIntFromString("18867677047139790809471719918880601980605904427073186248909139907505620573990")}))
+	for wordSize := 1; wordSize <= 2; wordSize++ {
+		fmt.Printf("wordSize: %d\n", wordSize)
+		assert.CheckCircuit(&TestBarC{WordSize: wordSize}, test.WithCurves(ecc.BN254), test.WithBackends(backend.GROTH16),
+			test.WithValidAssignment(&TestBarC{wordSize, 0, 0}),
+			test.WithValidAssignment(&TestBarC{wordSize, 1, bigIntFromString("680564733841876926926749214863536422912")}),
+			test.WithValidAssignment(&TestBarC{wordSize, 2, bigIntFromString("1361129467683753853853498429727072845824")}),
+			test.WithValidAssignment(&TestBarC{wordSize, bigIntFromString("4111585712030104139416666328230194227848755236259444667527487224433891325648"), bigIntFromString("18867677047139790809471719918880601980605904427073186248909139907505620573990")}))
 
+	}
 }
 
 type TestCompressC struct {
+	WordSize      int
 	In1, In2, Out frontend.Variable
 }
 
 func (c *TestCompressC) Define(api frontend.API) error {
-	s := NewSkyscraper(api)
+	s := NewSkyscraper(api, c.WordSize)
 	api.AssertIsEqual(s.Compress(c.In1, c.In2), c.Out)
 	return nil
 }
 
 func TestCompress(t *testing.T) {
 	assert := test.NewAssert(t)
-	assert.CheckCircuit(&TestCompressC{}, test.WithCurves(ecc.BN254), test.WithBackends(backend.GROTH16),
-		test.WithValidAssignment(&TestCompressC{
-			bigIntFromString("21614608883591910674239883101354062083890746690626773887530227216615498812963"),
-			bigIntFromString("9813154100006487150380270585621895148484502414032888228750638800367218873447"),
-			bigIntFromString("3583228880285179354728993622328037400470978495633822008876840172083178912457")}))
+	for wordSize := 1; wordSize <= 2; wordSize++ {
+		assert.CheckCircuit(&TestCompressC{WordSize: wordSize}, test.WithCurves(ecc.BN254), test.WithBackends(backend.GROTH16),
+			test.WithValidAssignment(&TestCompressC{wordSize,
+				bigIntFromString("21614608883591910674239883101354062083890746690626773887530227216615498812963"),
+				bigIntFromString("9813154100006487150380270585621895148484502414032888228750638800367218873447"),
+				bigIntFromString("3583228880285179354728993622328037400470978495633822008876840172083178912457")}))
+	}
+
 }

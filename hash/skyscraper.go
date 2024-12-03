@@ -11,22 +11,25 @@ import (
 	"math/bits"
 )
 
-func bytesBeHint(field *big.Int, inputs []*big.Int, outputs []*big.Int) error {
+func wordsBeHint(field *big.Int, inputs []*big.Int, outputs []*big.Int) error {
 	if field.Cmp(ecc.BN254.ScalarField()) != 0 {
 		return fmt.Errorf("bytesHint: expected BN254 Fr, got %s", field)
 	}
-	if len(inputs) != 1 {
-		return fmt.Errorf("bytesHint: expected 1 input, got %d", len(inputs))
+	if len(inputs) != 2 {
+		return fmt.Errorf("bytesHint: expected 2 inputs, got %d", len(inputs))
 	}
-	if len(outputs) != 16 {
-		return fmt.Errorf("bytesHint: expected 32 outputs, got %d", len(outputs))
+	wordLen := int(inputs[0].Int64())
+	if len(outputs) != 32/wordLen {
+		return fmt.Errorf("bytesHint: expected %d outputs, got %d", 32/wordLen, len(outputs))
 	}
 	bytes := make([]byte, 32)
-	inputs[0].FillBytes(bytes)
+	inputs[1].FillBytes(bytes)
 	for i, o := range outputs {
-		o.SetUint64(uint64(bytes[2*i]))
-		o.Mul(o, big.NewInt(256))
-		o.Add(o, big.NewInt(int64(bytes[2*i+1])))
+		o.SetUint64(0)
+		for j := range wordLen {
+			o.Mul(o, big.NewInt(256))
+			o.Add(o, big.NewInt(int64(bytes[wordLen*i+j])))
+		}
 	}
 	return nil
 }
@@ -48,16 +51,17 @@ func gtHint(_ *big.Int, inputs []*big.Int, outputs []*big.Int) error {
 }
 
 func init() {
-	solver.RegisterHint(bytesBeHint)
+	solver.RegisterHint(wordsBeHint)
 	solver.RegisterHint(gtHint)
 }
 
 type Skyscraper struct {
-	rc    [8]big.Int
-	sigma big.Int
-	sboxT *logderivlookup.Table
-	rchk  frontend.Rangechecker
-	api   frontend.API
+	rc       [8]big.Int
+	sigma    big.Int
+	sboxT    *logderivlookup.Table
+	rchk     frontend.Rangechecker
+	wordSize int
+	api      frontend.API
 }
 
 func sboxByte(b byte) byte {
@@ -67,19 +71,22 @@ func sboxByte(b byte) byte {
 	return bits.RotateLeft8(b^(x&y&z), 1)
 }
 
-func initSbox(api frontend.API) *logderivlookup.Table {
+func initSbox(api frontend.API, wordSize int) *logderivlookup.Table {
 	t := logderivlookup.New(api)
-	for i := range 65536 {
-		w := uint16(i)
-		b1 := byte(w & 0xff)
-		b2 := byte(w >> 8)
-		r := uint16(sboxByte(b1)) | (uint16(sboxByte(b2)) << 8)
+	tableSize := 1 << (8 * wordSize)
+	for i := range tableSize {
+		r := uint64(0)
+		for j := range wordSize {
+			shiftSize := j * 8
+			inpByte := byte((i >> shiftSize) & 0xff)
+			r |= uint64(sboxByte(inpByte)) << shiftSize
+		}
 		t.Insert(r)
 	}
 	return t
 }
 
-func NewSkyscraper(api frontend.API) *Skyscraper {
+func NewSkyscraper(api frontend.API, wordSize int) *Skyscraper {
 	rc := [8]big.Int{}
 	rc[0].SetString("17829420340877239108687448009732280677191990375576158938221412342251481978692", 10)
 	rc[1].SetString("5852100059362614845584985098022261541909346143980691326489891671321030921585", 10)
@@ -95,8 +102,9 @@ func NewSkyscraper(api frontend.API) *Skyscraper {
 	return &Skyscraper{
 		rc,
 		sigma,
-		initSbox(api),
+		initSbox(api, wordSize),
 		rangecheck.New(api),
+		wordSize,
 		api,
 	}
 }
@@ -109,10 +117,10 @@ func (s *Skyscraper) square(v frontend.Variable) frontend.Variable {
 	return s.api.Mul(s.api.Mul(v, v), s.sigma)
 }
 
-func (s *Skyscraper) varFromBytesBe(bytes []frontend.Variable) frontend.Variable {
+func (s *Skyscraper) varFromWordsBe(words []frontend.Variable) frontend.Variable {
 	result := frontend.Variable(0)
-	for _, b := range bytes {
-		result = s.api.Mul(result, 65536)
+	for _, b := range words {
+		result = s.api.Mul(result, 1<<(8*s.wordSize))
 		result = s.api.Add(result, b)
 	}
 	return result
@@ -137,26 +145,28 @@ func (s *Skyscraper) assertLessThanModulus(hi, lo frontend.Variable) {
 }
 
 // the result is NOT rangechecked, but if it is in range, it is canonical
-func (s *Skyscraper) canonicalDecompose(v frontend.Variable) [16]frontend.Variable {
-	o, _ := s.api.Compiler().NewHint(bytesBeHint, 16, v)
-	result := [16]frontend.Variable{}
+func (s *Skyscraper) canonicalDecompose(v frontend.Variable) []frontend.Variable {
+	wordsPerFelt := 32 / s.wordSize
+	o, _ := s.api.Compiler().NewHint(wordsBeHint, wordsPerFelt, s.wordSize, v)
+	result := make([]frontend.Variable, wordsPerFelt)
 	copy(result[:], o)
-	s.api.AssertIsEqual(s.varFromBytesBe(result[:]), v)
-	s.assertLessThanModulus(s.varFromBytesBe(result[:8]), s.varFromBytesBe(result[8:]))
+	s.api.AssertIsEqual(s.varFromWordsBe(result[:]), v)
+	s.assertLessThanModulus(s.varFromWordsBe(result[:wordsPerFelt/2]), s.varFromWordsBe(result[wordsPerFelt/2:]))
 	return result
 }
 
 func (s *Skyscraper) bar(v frontend.Variable) frontend.Variable {
-	bytes := s.canonicalDecompose(v)
-	tmp := [8]frontend.Variable{}
-	copy(tmp[:], bytes[:8])
-	copy(bytes[:], bytes[8:])
-	copy(bytes[8:], tmp[:])
-	for i := range bytes {
+	words := s.canonicalDecompose(v)
+	wordsPerFelt := 32 / s.wordSize
+	tmp := make([]frontend.Variable, wordsPerFelt/2)
+	copy(tmp[:], words[:wordsPerFelt/2])
+	copy(words[:], words[wordsPerFelt/2:])
+	copy(words[wordsPerFelt/2:], tmp[:])
+	for i := range words {
 		// sbox implicitly rangechecks the input
-		bytes[i] = s.sbox(bytes[i])
+		words[i] = s.sbox(words[i])
 	}
-	return s.varFromBytesBe(bytes[:])
+	return s.varFromWordsBe(words[:])
 }
 
 func (s *Skyscraper) Permute(state *[2]frontend.Variable) {
