@@ -8,7 +8,6 @@ import (
 	"github.com/consensys/gnark/frontend/cs/r1cs"
 	"github.com/consensys/gnark/std/math/uints"
 	gnark_nimue "github.com/reilabs/gnark-nimue"
-	"github.com/reilabs/gnark-nimue/hash"
 )
 
 type TestCircuit struct {
@@ -185,31 +184,6 @@ func ExampleWhir() {
 	fmt.Printf("%v\n", vErr)
 }
 
-type Manhattan struct {
-	I, O frontend.Variable
-}
-
-func (c *Manhattan) Define(api frontend.API) error {
-	s := hash.NewSkyscraper(api, 1)
-	a := c.I
-	for range 3000 {
-		a = s.Compress(a, a)
-	}
-	api.AssertIsEqual(c.O, a)
-	return nil
-}
-
-func ExampleManhattan() {
-
-	ccs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, &Manhattan{})
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Printf("constraints: %d\n", ccs.GetNbConstraints())
-
-}
-
 func main() {
-	ExampleManhattan()
+	ExampleWhir()
 }
