@@ -2,14 +2,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/reilabs/gnark-nimue/hash"
-
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
+	"github.com/consensys/gnark/std/lookup/logderivlookup"
 	"github.com/consensys/gnark/std/math/uints"
 	gnark_nimue "github.com/reilabs/gnark-nimue"
+	"github.com/reilabs/gnark-nimue/hash"
+	"math/bits"
 )
 
 type TestCircuit struct {
@@ -193,7 +194,7 @@ type Manhattan struct {
 func (c *Manhattan) Define(api frontend.API) error {
 	s := hash.NewSkyscraper(api)
 	a := c.I
-	for range 2000 {
+	for range 3000 {
 		a = s.Compress(a, a)
 	}
 	api.AssertIsEqual(c.O, a)
@@ -220,8 +221,28 @@ func ExampleManhattan() {
 	fmt.Printf("%v\n", vErr)
 }
 
+type TestLookup struct {
+	In frontend.Variable
+}
+
+func (c *TestLookup) Define(api frontend.API) error {
+	table := logderivlookup.New(api)
+	for i := range 256 {
+		table.Insert(bits.RotateLeft8(uint8(i), 3))
+	}
+	c0 := c.In
+	for range 256 {
+		c0 = table.Lookup(c0)[0]
+	}
+	api.AssertIsEqual(c0, c.In)
+	return nil
+}
+
 func main() {
+	ccs, _ := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, &TestLookup{})
+	fmt.Printf("constraints: %d\n", ccs.GetNbConstraints())
+
 	//Example1()
 	//ExampleWhir()
-	ExampleManhattan()
+	//ExampleManhattan()
 }
