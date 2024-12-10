@@ -19,8 +19,10 @@ func (k *KeccakState) R() int {
 	return 136
 }
 
-func (k *KeccakState) Initialize(iv [32]uints.U8) {
-	copy(k.state[k.R():k.R()+32], iv[:])
+func (k *KeccakState) Initialize(iv [32]byte) {
+	for i := range 32 {
+		k.state[k.R()+i] = uints.NewU8(iv[i])
+	}
 }
 
 func (k *KeccakState) Permute() {

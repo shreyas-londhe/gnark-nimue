@@ -2,7 +2,6 @@ package gnark_nimue
 
 import (
 	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/gnark/std/math/uints"
 	"github.com/reilabs/gnark-nimue/hash"
 	_ "unsafe"
 )
@@ -30,7 +29,7 @@ func keccakF(a *[200]byte) {
 	}
 }
 
-func generateTag(io []byte) [32]uints.U8 {
+func generateTag(io []byte) [32]byte {
 	state := [200]byte{}
 	absorbPos := 0
 	R := 136
@@ -47,10 +46,8 @@ func generateTag(io []byte) [32]uints.U8 {
 		}
 	}
 	keccakF(&state)
-	tag := [32]uints.U8{}
-	for i := 0; i < 32; i++ {
-		tag[i] = uints.NewU8(state[i])
-	}
+	tag := [32]byte{}
+	copy(tag[:], state[:32])
 	return tag
 }
 

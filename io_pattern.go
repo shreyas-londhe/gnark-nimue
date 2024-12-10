@@ -130,7 +130,7 @@ func (stack *OpQueue) doOp(kind OpKind, size uint64) error {
 		return nil
 	}
 	if stack.ops[0].Size < size {
-		return fmt.Errorf("OpStack.doOp: size mismatch")
+		return fmt.Errorf("OpStack.doOp: %v size mismatch, have %d, requested %d", kind, stack.ops[0].Size, size)
 	}
 	stack.ops = stack.ops[1:]
 	return nil

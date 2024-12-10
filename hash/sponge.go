@@ -3,13 +3,12 @@ package hash
 import (
 	"fmt"
 	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/gnark/std/math/uints"
 )
 
 type Sponge[U any] interface {
 	N() int
 	R() int
-	Initialize(iv [32]uints.U8)
+	Initialize(iv [32]byte)
 	Permute()
 	State() []U
 	Zeroize(index int)
@@ -17,7 +16,7 @@ type Sponge[U any] interface {
 }
 
 type DuplexHash[U any] interface {
-	Initialize(iv [32]uints.U8)
+	Initialize(iv [32]byte)
 	Absorb(data []U)
 	Squeeze(out []U)
 	Ratchet()
@@ -30,7 +29,7 @@ type DuplexSponge[U any, S Sponge[U]] struct {
 	squeezePos int
 }
 
-func (s *DuplexSponge[U, S]) Initialize(iv [32]uints.U8) {
+func (s *DuplexSponge[U, S]) Initialize(iv [32]byte) {
 	s.sponge.Initialize(iv)
 	s.absorbPos = 0
 	s.squeezePos = s.sponge.R()
