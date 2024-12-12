@@ -2,13 +2,14 @@ package gnark_nimue
 
 import (
 	"fmt"
+	"math/big"
+
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	bits2 "github.com/consensys/gnark/std/math/bits"
 	"github.com/consensys/gnark/std/math/uints"
 	"github.com/reilabs/gnark-nimue/hash"
 	skyscraper "github.com/reilabs/gnark-skyscraper"
-	"math/big"
 )
 
 type Arthur interface {
@@ -134,17 +135,21 @@ func (arthur *nativeArthur[H]) FillChallengeBytes(out []uints.U8) error {
 	lenGood := min(len(out), numBytes)
 	tmp := make([]frontend.Variable, 1)
 	for i := range (len(out) + lenGood - 1) / lenGood {
-		err = arthur.FillNextScalars(tmp)
+		err = arthur.FillChallengeScalars(tmp)
 		if err != nil {
 			return err
 		}
+
 		bits := bits2.ToBinary(arthur.api, tmp[0])
 		for k := range lenGood {
 			o := i*lenGood + k
+			if o >= len(out) {
+				break
+			}
 			out[o] = uints.NewU8(0)
 			curMul := 1
 			for j := range 8 {
-				out[o].Val = arthur.api.Add(arthur.api.Mul(curMul, bits[8*o+j]), out[o].Val)
+				out[o].Val = arthur.api.Add(arthur.api.Mul(curMul, bits[8*k+j]), out[o].Val)
 				curMul *= 2
 			}
 		}
