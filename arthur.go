@@ -133,17 +133,20 @@ func (arthur *nativeArthur[H]) FillChallengeBytes(out []uints.U8) error {
 	}
 	lenGood := min(len(out), numBytes)
 	tmp := make([]frontend.Variable, 1)
-	err = arthur.FillNextScalars(tmp)
-	if err != nil {
-		return err
-	}
-	bits := bits2.ToBinary(arthur.api, tmp[0])
-	for i := 0; i < lenGood; i++ {
-		out[i] = uints.NewU8(0)
-		curMul := 1
-		for j := range 8 {
-			out[i].Val = arthur.api.Add(arthur.api.Mul(curMul, bits[8*i+j]), out[i].Val)
-			curMul *= 2
+	for i := range (len(out) + lenGood - 1) / lenGood {
+		err = arthur.FillNextScalars(tmp)
+		if err != nil {
+			return err
+		}
+		bits := bits2.ToBinary(arthur.api, tmp[0])
+		for k := range lenGood {
+			o := i*lenGood + k
+			out[o] = uints.NewU8(0)
+			curMul := 1
+			for j := range 8 {
+				out[o].Val = arthur.api.Add(arthur.api.Mul(curMul, bits[8*o+j]), out[o].Val)
+				curMul *= 2
+			}
 		}
 	}
 	return nil
