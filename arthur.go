@@ -114,6 +114,7 @@ func (arthur *nativeArthur[H]) FillNextBytes(uints []uints.U8) error {
 			return err
 		}
 	}
+	arthur.transcript = arthur.transcript[len(uints):]
 	return nil
 }
 
