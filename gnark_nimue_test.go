@@ -27,7 +27,7 @@ type TestCircuit struct {
 }
 
 func (circuit *TestCircuit) Define(api frontend.API) error {
-	arthur, err := NewKeccakArthur(api, circuit.IO, circuit.Transcript[:])
+	arthur, err := NewKeccakArthur(api, circuit.IO, circuit.Transcript[:], false)
 	if err != nil {
 		return err
 	}

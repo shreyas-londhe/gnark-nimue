@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/frontend"
@@ -17,7 +18,7 @@ type TestCircuit struct {
 }
 
 func (circuit *TestCircuit) Define(api frontend.API) error {
-	arthur, err := gnark_nimue.NewKeccakArthur(api, circuit.IO, circuit.Transcript[:])
+	arthur, err := gnark_nimue.NewKeccakArthur(api, circuit.IO, circuit.Transcript[:], false)
 
 	if err != nil {
 		return err
@@ -91,7 +92,7 @@ type WhirCircuit struct {
 }
 
 func (circuit *WhirCircuit) Define(api frontend.API) error {
-	arthur, err := gnark_nimue.NewKeccakArthur(api, circuit.IO, circuit.Transcript[:])
+	arthur, err := gnark_nimue.NewKeccakArthur(api, circuit.IO, circuit.Transcript[:], false)
 	if err != nil {
 		return err
 	}
@@ -192,7 +193,7 @@ type WhirSkyscraperCircuit struct {
 
 func (circuit *WhirSkyscraperCircuit) Define(api frontend.API) error {
 	sc := skyscraper.NewSkyscraper(api, 2)
-	arthur, err := gnark_nimue.NewSkyscraperArthur(api, sc, circuit.IO, circuit.Transcript[:])
+	arthur, err := gnark_nimue.NewSkyscraperArthur(api, sc, circuit.IO, circuit.Transcript[:], false)
 	if err != nil {
 		return err
 	}
