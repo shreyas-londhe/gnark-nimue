@@ -151,8 +151,18 @@ func (stack *OpQueue) Absorb(size uint64) error {
 	return stack.doOp(Absorb, size)
 }
 
-func (io *IOPattern) GetOpQueue() OpQueue {
-	newOps := make([]Op, len(io.Ops))
-	copy(newOps, io.Ops)
-	return OpQueue{ops: newOps}
+func (io *IOPattern) GetOpQueue(ignoreHints bool) OpQueue {
+	if ignoreHints {
+		newOps := []Op{}
+		for _, op := range io.Ops {
+			if op.Kind != Hint {
+				newOps = append(newOps, op)
+			}
+		}
+		return OpQueue{ops: newOps}
+	} else {
+		newOps := make([]Op, len(io.Ops))
+		copy(newOps, io.Ops)
+		return OpQueue{ops: newOps}
+	}
 }
