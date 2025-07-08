@@ -8,6 +8,7 @@ const (
 	Absorb OpKind = iota
 	Squeeze
 	Ratchet
+	Hint
 )
 
 func (kind OpKind) String() string {
@@ -18,6 +19,8 @@ func (kind OpKind) String() string {
 		return "Squeeze"
 	case Ratchet:
 		return "Ratchet"
+	case Hint:
+		return "Hint"
 	}
 	return "Unknown"
 }
@@ -46,6 +49,8 @@ func (io *IOPattern) PPrint() string {
 			kindTag = "Squeeze"
 		case Ratchet:
 			kindTag = "Ratchet"
+		case Hint:
+			kindTag = "Hint"
 		}
 		result += fmt.Sprintf("    * %s %d %s\n", kindTag, op.Size, op.Label)
 	}
@@ -76,6 +81,8 @@ func parseOpKind(patStr []byte) (OpKind, []byte, error) {
 		return Squeeze, patStr[1:], nil
 	case 'R':
 		return Ratchet, patStr[1:], nil
+	case 'H':
+		return Hint, patStr[1:], nil
 	}
 	return 0, nil, fmt.Errorf("parseOpKind: unknown op kind: %s", string(patStr[:1]))
 }
@@ -144,8 +151,18 @@ func (stack *OpQueue) Absorb(size uint64) error {
 	return stack.doOp(Absorb, size)
 }
 
-func (io *IOPattern) GetOpQueue() OpQueue {
-	newOps := make([]Op, len(io.Ops))
-	copy(newOps, io.Ops)
-	return OpQueue{ops: newOps}
+func (io *IOPattern) GetOpQueue(ignoreHints bool) OpQueue {
+	if ignoreHints {
+		newOps := []Op{}
+		for _, op := range io.Ops {
+			if op.Kind != Hint {
+				newOps = append(newOps, op)
+			}
+		}
+		return OpQueue{ops: newOps}
+	} else {
+		newOps := make([]Op, len(io.Ops))
+		copy(newOps, io.Ops)
+		return OpQueue{ops: newOps}
+	}
 }

@@ -51,7 +51,7 @@ func generateTag(io []byte) [32]byte {
 	return tag
 }
 
-func NewSafe[U any, H hash.DuplexHash[U]](sponge H, ioStr []byte) (*Safe[U, H], error) {
+func NewSafe[U any, H hash.DuplexHash[U]](sponge H, ioStr []byte, ignoreHints bool) (*Safe[U, H], error) {
 	tag := generateTag(ioStr)
 	sponge.Initialize(tag)
 
@@ -61,7 +61,7 @@ func NewSafe[U any, H hash.DuplexHash[U]](sponge H, ioStr []byte) (*Safe[U, H], 
 		return nil, err
 	}
 	return &Safe[U, H]{
-		ops:    io.GetOpQueue(),
+		ops:    io.GetOpQueue(ignoreHints),
 		sponge: sponge,
 	}, nil
 }

@@ -26,8 +26,8 @@ type byteArthur[H hash.DuplexHash[uints.U8]] struct {
 	safe       *Safe[uints.U8, H]
 }
 
-func NewByteArthur[S hash.DuplexHash[uints.U8]](api frontend.API, io []byte, transcript []uints.U8, hash S) (Arthur, error) {
-	safe, err := NewSafe[uints.U8, S](hash, io)
+func NewByteArthur[S hash.DuplexHash[uints.U8]](api frontend.API, io []byte, transcript []uints.U8, hash S, ignoreHints bool) (Arthur, error) {
+	safe, err := NewSafe[uints.U8, S](hash, io, ignoreHints)
 	if err != nil {
 		return nil, err
 	}
@@ -38,12 +38,12 @@ func NewByteArthur[S hash.DuplexHash[uints.U8]](api frontend.API, io []byte, tra
 	}, nil
 }
 
-func NewKeccakArthur(api frontend.API, io []byte, transcript []uints.U8) (Arthur, error) {
+func NewKeccakArthur(api frontend.API, io []byte, transcript []uints.U8, ignoreHints bool) (Arthur, error) {
 	sponge, err := hash.NewKeccak(api)
 	if err != nil {
 		return nil, err
 	}
-	return NewByteArthur[hash.Keccak](api, io, transcript, sponge)
+	return NewByteArthur[hash.Keccak](api, io, transcript, sponge, ignoreHints)
 }
 
 func (arthur *byteArthur[H]) FillNextBytes(uints []uints.U8) error {
@@ -182,11 +182,11 @@ func (arthur *nativeArthur[H]) PrintState(api frontend.API) {
 	arthur.safe.sponge.PrintState(api)
 }
 
-func NewSkyscraperArthur(api frontend.API, sc *skyscraper.Skyscraper, io []byte, transcript []uints.U8) (Arthur, error) {
+func NewSkyscraperArthur(api frontend.API, sc *skyscraper.Skyscraper, io []byte, transcript []uints.U8, ignoreHints bool) (Arthur, error) {
 	sponge, err := hash.NewSkyScraper(sc)
 	if err != nil {
 		return nil, err
 	}
-	safe, err := NewSafe[frontend.Variable, hash.Skyscraper](sponge, io)
+	safe, err := NewSafe[frontend.Variable, hash.Skyscraper](sponge, io, ignoreHints)
 	return &nativeArthur[hash.Skyscraper]{api, transcript, safe}, nil
 }
