@@ -28,7 +28,7 @@ func (s *SkyscraperState) Initialize(iv [32]byte) {
 }
 
 func (s *SkyscraperState) Permute() {
-	s.skyscraper.Permute(&s.s)
+	s.skyscraper.PermuteV2(&s.s)
 }
 
 func (s *SkyscraperState) State() []frontend.Variable {
